@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SnapBooth — Photobooth Online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-emoji" id="bgEmoji" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="logo">📸 <span>Snap</span>Booth</div>
+  <div class="steps">
+    <span id="step1" class="step active">1 · Foto</span>
+    <span class="sep">›</span>
+    <span id="step2" class="step">2 · Edit &amp; Unduh</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ LAYAR 1: KAMERA ============ -->
+  <section id="screenCam" class="screen active">
+    <div class="card cam-card">
+      <div class="video-wrap">
+        <video id="video" autoplay playsinline muted></video>
+        <div id="countdown" class="countdown"></div>
+        <div id="flash" class="flash"></div>
+        <div class="badge" id="shotBadge">Foto 0/4</div>
+        <div id="camStatus" class="cam-status">Menyiapkan kamera…</div>
+        <div id="camError" class="cam-error hidden">
+          <div class="big-emoji">🙈</div>
+          <p id="camErrorText"></p>
+          <button id="btnRetryCam" class="btn">Coba lagi</button>
+        </div>
+      </div>
+
+      <div class="shots" id="shots">
+        <div class="shot"></div><div class="shot"></div><div class="shot"></div><div class="shot"></div>
+      </div>
+
+      <div class="controls">
+        <label class="field">⏱️ Timer
+          <select id="timerSel">
+            <option value="3" selected>3 detik</option>
+            <option value="5">5 detik</option>
+            <option value="10">10 detik</option>
+          </select>
+        </label>
+        <button id="btnMirror" class="chip active" type="button">🪞 Mirror</button>
+        <button id="btnSwitch" class="chip" type="button">🔄 Ganti kamera</button>
+      </div>
+
+      <div class="actions">
+        <button id="btnStart" class="btn btn-big" disabled>📸 Mulai · 4 foto otomatis</button>
+        <button id="btnCancel" class="btn btn-ghost hidden">✋ Batal</button>
+      </div>
+
+      <label class="upload-link">
+        atau <u>pilih 4 foto dari galeri</u>
+        <input id="fileInput" type="file" accept="image/*" multiple hidden>
+      </label>
+    </div>
+  </section>
+
+  <!-- ============ LAYAR 2: EDITOR ============ -->
+  <section id="screenEdit" class="screen">
+    <div class="edit-grid">
+
+      <div class="stage card">
+        <canvas id="stage"></canvas>
+        <p class="hint">Tap emoji di foto untuk memilih, lalu seret untuk memindah ✨</p>
+      </div>
+
+      <div class="panel card">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="tabLayout" type="button">🖼️ Layout</button>
+          <button class="tab" data-tab="tabFilter" type="button">🎨 Filter</button>
+          <button class="tab" data-tab="tabFrame" type="button">🎀 Frame</button>
+          <button class="tab" data-tab="tabEmoji" type="button">😍 Emoji</button>
+          <button class="tab" data-tab="tabText" type="button">✏️ Teks</button>
+        </div>
+
+        <div id="tabLayout" class="pane active">
+          <h3>Susunan foto</h3>
+          <div class="opt-grid two">
+            <button class="opt active" data-layout="strip" type="button">
+              <div class="mini mini-strip"><i></i><i></i><i></i><i></i></div>
+              <span>Strip klasik 1×4</span>
+            </button>
+            <button class="opt" data-layout="grid" type="button">
+              <div class="mini mini-grid"><i></i><i></i><i></i><i></i></div>
+              <span>Kotak 2×2</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="tabFilter" class="pane">
+          <h3>Filter foto</h3>
+          <div id="filterGrid" class="opt-grid"></div>
+        </div>
+
+        <div id="tabFrame" class="pane">
+          <h3>Warna frame</h3>
+          <div id="swatches" class="swatches"></div>
+          <label class="custom-color">Warna sendiri
+            <input type="color" id="customColor" value="#ffb3c7">
+          </label>
+          <h3>Motif frame</h3>
+          <div id="themeGrid" class="opt-grid"></div>
+        </div>
+
+        <div id="tabEmoji" class="pane">
+          <h3>Pilih emoji</h3>
+          <div id="emojiGrid" class="emoji-grid"></div>
+          <div class="row">
+            <button id="btnScatter" class="btn btn-soft" type="button">🎀 Tebar emoji ini di bingkai</button>
+            <button id="btnScatterRandom" class="btn btn-soft" type="button">🎲 Tebar acak</button>
+            <button id="btnClearEmoji" class="btn btn-ghost" type="button">🧹 Hapus semua emoji</button>
+          </div>
+          <div id="stickerCtl" class="sticker-ctl hidden">
+            <h3>Emoji terpilih</h3>
+            <label>Ukuran <input type="range" id="stSize" min="0.04" max="0.4" step="0.005"></label>
+            <label>Putar <input type="range" id="stRot" min="-180" max="180" step="1"></label>
+            <button id="btnDelSticker" class="btn btn-ghost" type="button">🗑️ Hapus emoji ini</button>
+          </div>
+        </div>
+
+        <div id="tabText" class="pane">
+          <h3>Teks di bawah foto</h3>
+          <input id="captionInput" class="text-input" type="text" maxlength="30" value="Photobooth ✨" placeholder="Tulis caption lucu…">
+          <label class="check"><input type="checkbox" id="showDate" checked> Tampilkan tanggal</label>
+        </div>
+
+        <div class="downloads">
+          <button id="btnDownload" class="btn btn-big" type="button">⬇️ Unduh hasil (PNG)</button>
+          <div class="row">
+            <button id="btnDownloadSingles" class="btn btn-soft" type="button">🖼️ Unduh foto satuan</button>
+            <button id="btnRetake" class="btn btn-ghost" type="button">🔁 Foto ulang</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">Dibuat dengan 💖 · foto diproses di perangkatmu, tidak diunggah ke server</footer>
+<div id="toast" class="toast"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
