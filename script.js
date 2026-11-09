@@ -120,25 +120,47 @@ function stopCamera() {
   if (state.stream) { state.stream.getTracks().forEach(t => t.stop()); state.stream = null; }
   video.srcObject = null;
 }
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const inApp = /FBAN|FBAV|Instagram|Line\/|MicroMessenger|TikTok|musical_ly|BytedanceWebview|Snapchat|Twitter|GSA\/|; wv\)/i.test(navigator.userAgent);
+
+function withTimeout(p, ms) {
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('timeout'), { name: 'TimeoutError' })), ms))]);
+}
+async function openStream() {
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: state.facing, width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false
+    });
+  } catch (err) {
+    if (['OverconstrainedError', 'NotFoundError', 'TypeError'].includes(err.name))
+      return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    throw err;
+  }
+}
+
 async function startCamera() {
-  stopCamera(); showCamError(null); camStatus.textContent = 'Menyiapkan kamera…'; btnStart.disabled = true;
+  stopCamera(); showCamError(null); $('#camGate').classList.add('hidden');
+  camStatus.textContent = 'Menyiapkan kamera…'; btnStart.disabled = true;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     showCamError('Browser ini tidak mendukung kamera, atau halaman belum dibuka lewat HTTPS / localhost. Kamu tetap bisa memilih foto dari galeri.');
     return;
   }
   try {
-    state.stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: state.facing, width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false
-    });
+    state.stream = await withTimeout(openStream(), 25000);
+    video.muted = true; video.setAttribute('playsinline', ''); video.setAttribute('webkit-playsinline', '');
     video.srcObject = state.stream;
     await video.play().catch(() => {});
+    state.camAllowed = true;
     applyMirror(); camStatus.textContent = ''; btnStart.disabled = false;
   } catch (err) {
     const m = {
       NotAllowedError: 'Izin kamera ditolak. Klik ikon gembok di address bar, izinkan kamera, lalu coba lagi.',
       NotFoundError: 'Kamera tidak ditemukan di perangkat ini.',
       NotReadableError: 'Kamera sedang dipakai aplikasi lain. Tutup dulu aplikasi tersebut.',
-      OverconstrainedError: 'Kamera yang diminta tidak tersedia.'
+      OverconstrainedError: 'Kamera yang diminta tidak tersedia.',
+      SecurityError: 'Akses kamera diblokir oleh browser atau kebijakan situs. Buka lewat Safari / Chrome langsung.',
+      AbortError: 'Kamera gagal dimulai. Tutup aplikasi lain yang memakai kamera lalu coba lagi.',
+      TimeoutError: 'Kamera tidak merespons. Buka halaman ini langsung di Safari (iPhone) atau Chrome (Android), bukan dari dalam aplikasi lain.'
     };
     showCamError(m[err.name] || ('Kamera tidak bisa dibuka (' + (err.name || 'error') + ').'));
   }
@@ -373,24 +395,4 @@ function drawCard(ctx, L, s, img) {
 function drawFooter(ctx, L) {
   const cap = state.caption.trim(), date = state.showDate;
   if (!cap && !date) return;
-  const u = L.u, FONT = '"Fredoka","Baloo 2","Comic Sans MS",cursive,sans-serif';
-  let capSize = L.capSize;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const maxW = L.W - L.pad * 2 - 60 * u;
-  if (cap) { ctx.font = `600 ${capSize}px ${FONT}`; while (ctx.measureText(cap).width > maxW && capSize > 18) { capSize -= 2; ctx.font = `600 ${capSize}px ${FONT}`; } }
-  const dateSize = capSize * .5, dText = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
-  const cy = L.footerY + L.footerH * (cap && date ? .36 : .5) + 4 * u;
-  const dy = cap ? cy + capSize * .85 : L.footerY + L.footerH * .5;
-
-  ctx.font = `600 ${capSize}px ${FONT}`;
-  const w1 = cap ? ctx.measureText(cap).width : 0;
-  ctx.font = `500 ${dateSize}px ${FONT}`;
-  const w2 = date ? ctx.measureText(dText).width : 0;
-  const pw = Math.max(w1, w2) + 56 * u;
-  const top = (cap ? cy - capSize * .75 : dy - dateSize * .9), bottom = (date ? dy + dateSize * .85 : cy + capSize * .75);
-  ctx.save();
-  ctx.fillStyle = 'rgba(255,255,255,.88)'; ctx.shadowColor = 'rgba(0,0,0,.15)'; ctx.shadowBlur = 10 * u;
-  rr(ctx, (L.W - pw) / 2, top, pw, bottom - top, (bottom - top) / 2); ctx.fill();
-  ctx.restore();
-  ctx.fillStyle = '#4a3b52';
-  if (cap) { ctx.font = `600 ${capSize}px ${FONT}`; ctx.fillText(cap, L.W / 2, cy);
+  const u = L.u, FONT = '"Fredok
